@@ -1,7 +1,6 @@
 CC	= gcc
-#CFLAGS	= -g -Wall
-CFLAGS	= -O2
-LDFLAGS	= -lgmp
+CFLAGS	= -Wall -O2  -I/opt/local/include
+LDFLAGS	= -L/opt/local/lib -lgmp
 
 all: endianess.h secshare
 
