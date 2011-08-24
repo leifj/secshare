@@ -48,7 +48,7 @@ int main(int argc,char**argv)
 			fprintf(stderr,"Unable to create file %s.\n",buf);
 			return 1;
 		}
-		encrypt();
+		secshare_encrypt();
 		sharevector(amt);
 		for(i=3;i<argc;i++)share(argv[i]);
 	}else{/*decrypt*/
@@ -65,7 +65,7 @@ int main(int argc,char**argv)
 			fprintf(stderr,"Unable to create file %s.\n",buf);
 			return 1;
 		}
-		decrypt();
+		secshare_decrypt();
 	}
 	return 0;
 }

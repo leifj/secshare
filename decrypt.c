@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-int decrypt()
+int secshare_decrypt()
 {
 	byte *buf;
 

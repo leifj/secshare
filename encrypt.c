@@ -26,7 +26,7 @@
 #include <stdlib.h>
 
 
-int encrypt()
+int secshare_encrypt()
 {
 	byte*buf;
 

@@ -50,10 +50,10 @@ extern int fdin;
 extern int fdout;
 
 /*encrypt.c*/
-int encrypt();
+int secshare_encrypt();
 
 /*decrypt.c*/
-int decrypt();
+int secshare_decrypt();
 
 /*common.c*/
 
