@@ -1,0 +1,160 @@
+README for SecretSharer
+========================
+
+written by (c) Konrad Rosenbaum (konrad (AT) silmor (DOT) de), 2004
+This code is protected by the GNU GPL version 2 or any newer
+see COPYING for details
+
+Web:
+http://silmor.de/5 - Secshare Homepage
+http://wiki.silmor.de/crypto/SecretSharing - Crypto Wiki: Explanation of it
+
+
+DISCLAIMER: THIS IS A PROOF OF CONCEPT IMPLEMENTATION, YOU USE IT AT YOUR OWN RISK!
+NO WARRANTIES OF ANY KIND ARE GIVEN. NEITHER THAT IT DOES WHAT IT IS DESIGNED FOR,
+NOR THAT IT DOESN'T DO ANY HARM TO YOUR COMPUTER, YOUR HEALTH OR WHATEVER IS AROUND
+AT THE TIME.
+
+What is it?
+------------
+
+Secret Sharing is a cryptographic technology to split a secret message in a way so
+that n out of m shares (assuming each share is for a person: out of m persons) have
+to be available before the secret can be revealed.
+
+This is a proof of concept implementation that uses this technique to share the
+encryption key to a file so that n of m persons are needed to decrypt the file.
+
+
+How to use it?
+---------------
+
+secshare <amount> <file> <share-files...>
+
+ amount
+	Is the number n of shares/persons that are needed to reveal the secret.
+	Prepend it with a dash "-" to do the decryption.
+
+ file
+	Is the file to encrypt or decrypt.
+
+ share-files
+	Is the files in which to store the shares, you must list at least amount files.
+
+
+
+Example:
+
+ secshare 3 myfile.txt share1 share2 share3 share4 share5
+Encrypts myfile.txt into myfile.txt.enc and splits the AES-Key to it into five shares.
+Any three of these five shares will be able to decrypt the file.
+
+ secshare -3 myfile.txt.enc share4 share3 share5
+Will reveal the key from shares 3, 4, and 5 and then decrypt myfile.txt.enc into
+myfile.txt.enc.dec
+(Sorry for the filename, but that is still proof of concept - right?)
+
+Hint:
+If you want one person to be more important than the others, give him/her more
+than one share...
+
+Compiling it
+--------------
+
+You need libgmp version 4 and gcc installed, then just call "make" and it will
+generate secshare.
+
+Warning: I have never tested to compile that on anything other than Linux/x86, so
+several things could go rather wrong:
+*other systems might have different header files
+*the endianess test was only tested on little endian 32bit systems yet...
+ (but I'm reasonably sure it works on all Unices)
+
+If you come up with a good GNU Autotools setup for secshare, that fixes these problems,
+please mail it to me!
+
+Algorithms used
+----------------
+
+Secret Sharing:
+ I use a set of linear equations to split the secret. These are of the form:
+ k=M + a*x + b*x^2 + c*x^3 + ....
+ where k and x are the content of the share, M is the message and a,b,... is a set
+ of secret random constants that are deleted after splitting and recalculated during
+ revealing, there is exactly n-1 constants in the equation system.
+ All these equations are done in a modular field for practical reasons (read the wiki!).
+ I generate a 129 bit prime number p so that all operations are done modulo p.
+ I chose 129 bits so that p is always slightly bigger than the secret split (the AES-key).
+
+Secret Revealing:
+ There is a rather nice algorithm created by two chaps named Gauss (German mathematician)
+ and Jordan (French mathematician). It is the Gauss-Jordan-Elimination, that works with
+ some rather simple matrix operations(*).
+
+ (*)That doesn't mean I understand how they work, they were just simple to implement. See
+ http://www.aspire.cs.uah.edu/textbook/gauss.html
+
+Symmetric Encryption:
+ AES-128, algorithm code was taken from libgcrypt out of the GnuPG project. Thanks Werner.
+ AES-128 is the weakest form of AES, however it is good enough for the purpose of this project.
+ Maybe I'll port to AES-256 when I'm bored somewhen...
+
+Hashing:
+ SHA-1, algorithm code again from libgcrypt, which took it from glibc.
+ Actually only the first 128 (of 160) bits are used, this is rather insecure.
+ I promise I'll convert to SHA-256 when I convert to AES-256.
+
+Random:
+ The used random should be good enough for most applications, but is definitely inadequate
+ for multi-billion-dollar-secrets (so is AES-128 for that purpose).
+ It uses the normal ANSI-C-random-generator, but hashes the random values before using them,
+ 20 calls to rand() and one run through SHA-1 are done for 20 bytes of random. The random
+ generator is initialized with the usec-value from gettimeofday (which is rather weak).
+
+Attack vectors
+---------------
+
+In order of their importance, as I can see them:
+
+*Conspiring secret carriers
+*Random generator, using a hardware generator would be worlds better
+*SHA-160's use of only 128 bit
+*AES-128
+*the secret sharing algorithm (this is the only part of which the theory can be proven to be
+ secret, however: I might have made mistakes in implementation)
+
+Protocol
+---------
+
+Encryption:
+
+The file is encrypted with AES-128 in CBC mode, for reasons of simplicity the initialization
+Vector (16 random bytes) is encrypted first (while the CBC-buffer is still zero). This differs
+slightly from the normal operation of CBC where the IV is stored unencrypted and then transferred
+into the CBC buffer.
+
+The file looks like that:
+*16 encrypted IV bytes
+*4 bytes encrypted length
+*length encrypted bytes of the original file
+*up to 16 bytes encrypted padding (no special algorithm)
+
+A 129-bit prime is generated and for each share this information is stored (in hex) in the file:
+*the prime
+*the share part x
+*the k calculated for the key
+*the k calculated for the first 128 bit of the SHA-1 hash
+
+As you can see the hash is also split in a second secret.
+
+
+
+Decryption:
+
+The first n secrets are read and the matrixes are filled with the coefficients (1, x, x^2, x^3, ...)
+and the k's.
+
+Both matrixes are solved and the two M's (the key and the partial hash) are copied to the decryption
+algorithm.
+
+The file is decrypted using AES-128 and the hash values are compared.
